@@ -168,13 +168,11 @@ app.put("/tasks/:id", auth, async (req, res) => {
 
 // ================= DATABASE CONNECTION =================
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log("MongoDB Connected ✅"))
-  .catch((err) => console.log(err));
-
-// ================= SERVER =================
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+  });
