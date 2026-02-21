@@ -167,8 +167,8 @@ app.put("/tasks/:id", auth, async (req, res) => {
 });
 
 // ================= DATABASE CONNECTION =================
-mongoose
-  .connect(process.env.MONGO_URI, {
+console.log("MONGO_URI:", process.env.MONGO_URI ? "Loaded ✅" : "Missing ❌");
+mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
