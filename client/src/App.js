@@ -132,7 +132,7 @@ function App() {
     );
   }
 
-  const completedCount = tasks.filter((t) => t.completed).length;
+  //const completedCount = tasks.filter((t) => t.completed).length;
 
   // ================= AUTH =================
   const handleSignup = async () => {
