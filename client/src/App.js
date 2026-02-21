@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from "react";
 
+const BASE_URL = "https://student-task-backend-6g1q.onrender.com";
+
 function App() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
   const [search, setSearch] = useState("");
 
-  // Auth states
   const [user, setUser] = useState(null);
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // ================= CHECK LOGIN ON LOAD =================
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -21,11 +21,10 @@ function App() {
     }
   }, []);
 
-  // ================= FETCH TASKS =================
   const fetchTasks = async () => {
     const token = localStorage.getItem("token");
 
-    const res = await fetch("http://localhost:5000/tasks", {
+    const res = await fetch(`${BASE_URL}/tasks`, {
       headers: {
         Authorization: token,
       },
@@ -35,13 +34,12 @@ function App() {
     setTasks(data);
   };
 
-  // ================= ADD TASK =================
   const addTask = async () => {
     if (!title) return;
 
     const token = localStorage.getItem("token");
 
-    await fetch("http://localhost:5000/tasks", {
+    await fetch(`${BASE_URL}/tasks`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -54,11 +52,10 @@ function App() {
     fetchTasks();
   };
 
-  // ================= DELETE TASK =================
   const deleteTask = async (id) => {
     const token = localStorage.getItem("token");
 
-    await fetch(`http://localhost:5000/tasks/${id}`, {
+    await fetch(`${BASE_URL}/tasks/${id}`, {
       method: "DELETE",
       headers: {
         Authorization: token,
@@ -68,11 +65,10 @@ function App() {
     fetchTasks();
   };
 
-  // ================= TOGGLE COMPLETE =================
   const toggleComplete = async (task) => {
     const token = localStorage.getItem("token");
 
-    await fetch(`http://localhost:5000/tasks/${task._id}`, {
+    await fetch(`${BASE_URL}/tasks/${task._id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -84,9 +80,8 @@ function App() {
     fetchTasks();
   };
 
-  // ================= AUTH FUNCTIONS =================
   const handleSignup = async () => {
-    const res = await fetch("http://localhost:5000/signup", {
+    const res = await fetch(`${BASE_URL}/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password }),
@@ -97,7 +92,7 @@ function App() {
   };
 
   const handleLogin = async () => {
-    const res = await fetch("http://localhost:5000/login", {
+    const res = await fetch(`${BASE_URL}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -128,7 +123,6 @@ function App() {
 
   const completedCount = tasks.filter((t) => t.completed).length;
 
-  // ================= SHOW AUTH SCREEN =================
   if (!user) {
     return (
       <div style={styles.page}>
@@ -178,7 +172,6 @@ function App() {
     );
   }
 
-  // ================= MAIN APP =================
   return (
     <div style={styles.page}>
       <div style={styles.card}>
@@ -265,7 +258,7 @@ function App() {
   );
 }
 
-// ================= STYLES =================
+// ======= STYLES OBJECT =======
 const styles = {
   page: {
     minHeight: "100vh",
