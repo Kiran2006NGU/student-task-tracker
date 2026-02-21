@@ -104,8 +104,12 @@ app.post("/login", async (req, res) => {
 // Create Task
 app.post("/tasks", auth, async (req, res) => {
   try {
+    const { title, dueDate, priority } = req.body;
+
     const newTask = new Task({
-      title: req.body.title,
+      title,
+      dueDate,
+      priority,
       user: req.user.userId,
     });
 
