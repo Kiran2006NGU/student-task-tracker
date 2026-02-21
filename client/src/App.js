@@ -7,6 +7,9 @@ function App() {
   const [title, setTitle] = useState("");
   const [search, setSearch] = useState("");
 
+  const [dueDate, setDueDate] = useState("");
+  const [priority, setPriority] = useState("Medium");
+
   const [user, setUser] = useState(null);
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
@@ -15,7 +18,7 @@ function App() {
 
   const [loading, setLoading] = useState(false);
 
-  // ================= CHECK LOGIN ON LOAD =================
+  // ================= CHECK LOGIN =================
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
@@ -35,11 +38,6 @@ function App() {
         headers: { Authorization: token },
       });
 
-      if (!res.ok) {
-        console.log("Failed to fetch tasks");
-        return;
-      }
-
       const data = await res.json();
       setTasks(data);
     } catch (err) {
@@ -47,11 +45,8 @@ function App() {
     }
   };
 
-  // Load tasks when user logs in
   useEffect(() => {
-    if (user) {
-      fetchTasks();
-    }
+    if (user) fetchTasks();
   }, [user]);
 
   // ================= ADD TASK =================
@@ -67,17 +62,19 @@ function App() {
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title, dueDate, priority }),
       });
 
       setTitle("");
+      setDueDate("");
+      setPriority("Medium");
       fetchTasks();
     } catch (err) {
       alert("Failed to add task");
     }
   };
 
-  // ================= DELETE TASK =================
+  // ================= DELETE =================
   const deleteTask = async (id) => {
     try {
       const token = localStorage.getItem("token");
@@ -89,11 +86,11 @@ function App() {
 
       fetchTasks();
     } catch (err) {
-      alert("Failed to delete task");
+      alert("Delete failed");
     }
   };
 
-  // ================= TOGGLE COMPLETE =================
+  // ================= TOGGLE =================
   const toggleComplete = async (task) => {
     try {
       const token = localStorage.getItem("token");
@@ -109,7 +106,7 @@ function App() {
 
       fetchTasks();
     } catch (err) {
-      alert("Failed to update task");
+      alert("Update failed");
     }
   };
 
@@ -127,13 +124,13 @@ function App() {
       const data = await res.json();
 
       if (res.ok) {
-        alert(data.message || "Signup successful");
+        alert(data.message);
         setIsLogin(true);
       } else {
-        alert(data.message || "Signup failed");
+        alert(data.message);
       }
-    } catch (err) {
-      alert("Server error. Try again.");
+    } catch {
+      alert("Signup failed");
     } finally {
       setLoading(false);
     }
@@ -156,18 +153,17 @@ function App() {
         localStorage.setItem("user", JSON.stringify(data.user));
         setUser(data.user);
       } else {
-        alert(data.message || "Invalid credentials");
+        alert(data.message);
       }
-    } catch (err) {
-      alert("Server may be waking up. Please try again in a few seconds.");
+    } catch {
+      alert("Login failed");
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.clear();
     setUser(null);
     setTasks([]);
   };
@@ -247,17 +243,35 @@ function App() {
           <input
             style={styles.input}
             type="text"
-            placeholder="Enter task..."
+            placeholder="Task title..."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-          <button style={styles.addBtn} onClick={addTask}>
-            ➕ Add
-          </button>
         </div>
 
         <input
-          style={{ ...styles.input, marginBottom: "20px" }}
+          style={styles.input}
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+        />
+
+        <select
+          style={styles.input}
+          value={priority}
+          onChange={(e) => setPriority(e.target.value)}
+        >
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+
+        <button style={styles.addBtn} onClick={addTask}>
+          ➕ Add Task
+        </button>
+
+        <input
+          style={{ ...styles.input, marginTop: "20px" }}
           type="text"
           placeholder="🔍 Search tasks..."
           value={search}
@@ -270,12 +284,43 @@ function App() {
             .filter((task) => !task.completed)
             .map((task) => (
               <li key={task._id} style={styles.taskItem}>
-                <span
-                  onClick={() => toggleComplete(task)}
-                  style={{ cursor: "pointer", flex: 1 }}
-                >
-                  {task.title}
-                </span>
+                <div style={{ flex: 1 }}>
+                  <strong
+                    style={{ cursor: "pointer" }}
+                    onClick={() => toggleComplete(task)}
+                  >
+                    {task.title}
+                  </strong>
+
+                  <div style={{ fontSize: "12px" }}>
+                    📅{" "}
+                    {task.dueDate
+                      ? new Date(task.dueDate).toLocaleDateString()
+                      : "No Due Date"}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color:
+                        task.priority === "High"
+                          ? "red"
+                          : task.priority === "Medium"
+                          ? "orange"
+                          : "green",
+                    }}
+                  >
+                    🔥 {task.priority}
+                  </div>
+
+                  {task.dueDate &&
+                    new Date(task.dueDate) < new Date() && (
+                      <div style={{ color: "red", fontSize: "12px" }}>
+                        ⚠️ Overdue
+                      </div>
+                    )}
+                </div>
+
                 <button
                   style={styles.deleteBtn}
                   onClick={() => deleteTask(task._id)}
@@ -293,15 +338,14 @@ function App() {
             .map((task) => (
               <li key={task._id} style={styles.taskItem}>
                 <span
-                  onClick={() => toggleComplete(task)}
                   style={{
                     textDecoration: "line-through",
-                    cursor: "pointer",
                     flex: 1,
                   }}
                 >
                   {task.title}
                 </span>
+
                 <button
                   style={styles.deleteBtn}
                   onClick={() => deleteTask(task._id)}
@@ -328,43 +372,43 @@ const styles = {
     background: "white",
     padding: "30px",
     borderRadius: "12px",
-    width: "420px",
+    width: "450px",
     boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-    textAlign: "center",
     position: "relative",
   },
   inputRow: {
     display: "flex",
     gap: "10px",
-    marginBottom: "20px",
   },
   input: {
-    flex: 1,
+    width: "100%",
     padding: "8px",
     borderRadius: "6px",
     border: "1px solid #ccc",
     marginBottom: "10px",
   },
   addBtn: {
-    padding: "8px 12px",
+    width: "100%",
+    padding: "8px",
     background: "#667eea",
     color: "white",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
+    marginBottom: "10px",
   },
   deleteBtn: {
-    marginLeft: "10px",
     background: "red",
     color: "white",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
+    padding: "5px 8px",
   },
   logoutBtn: {
     position: "absolute",
-    top: "15px",
-    right: "15px",
+    top: "10px",
+    right: "10px",
     background: "#333",
     color: "white",
     border: "none",
@@ -379,7 +423,7 @@ const styles = {
   taskItem: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: "10px",
     padding: "8px",
     background: "#f4f4f4",
