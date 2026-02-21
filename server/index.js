@@ -28,9 +28,6 @@ app.get("/", (req, res) => {
 
 // ================= AUTH ROUTES =================
 
-app.get("/test", (req, res) => {
-  res.send("Test route working");
-});
 // SIGNUP
 app.post("/signup", async (req, res) => {
   try {
@@ -102,14 +99,14 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// ================= TASK ROUTES (PROTECTED) =================
+// ================= TASK ROUTES =================
 
 // Create Task
 app.post("/tasks", auth, async (req, res) => {
   try {
     const newTask = new Task({
       title: req.body.title,
-      user: req.user.userId
+      user: req.user.userId,
     });
 
     const savedTask = await newTask.save();
@@ -119,7 +116,7 @@ app.post("/tasks", auth, async (req, res) => {
   }
 });
 
-// Get All Tasks (Only Logged-in User's Tasks)
+// Get Tasks
 app.get("/tasks", auth, async (req, res) => {
   try {
     const tasks = await Task.find({ user: req.user.userId });
@@ -134,7 +131,7 @@ app.delete("/tasks/:id", auth, async (req, res) => {
   try {
     const deletedTask = await Task.findOneAndDelete({
       _id: req.params.id,
-      user: req.user.userId
+      user: req.user.userId,
     });
 
     if (!deletedTask) {
@@ -147,7 +144,7 @@ app.delete("/tasks/:id", auth, async (req, res) => {
   }
 });
 
-// Update / Toggle Task
+// Update Task
 app.put("/tasks/:id", auth, async (req, res) => {
   try {
     const updatedTask = await Task.findOneAndUpdate(
@@ -168,10 +165,14 @@ app.put("/tasks/:id", auth, async (req, res) => {
 
 // ================= DATABASE CONNECTION =================
 console.log("MONGO_URI:", process.env.MONGO_URI ? "Loaded ✅" : "Missing ❌");
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected ✅"))
-  .catch(err => console.error("MongoDB connection error:", err.message))
-  .then(() => console.log("MongoDB Connected ✅"))
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
-  });
+  .catch((err) => console.error("MongoDB connection error:", err.message));
+
+// ================= SERVER START =================
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
