@@ -10,6 +10,8 @@ function App() {
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("Medium");
 
+  const [sortType, setSortType] = useState("created");
+
   const [user, setUser] = useState(null);
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
@@ -69,7 +71,7 @@ function App() {
       setDueDate("");
       setPriority("Medium");
       fetchTasks();
-    } catch (err) {
+    } catch {
       alert("Failed to add task");
     }
   };
@@ -85,7 +87,7 @@ function App() {
       });
 
       fetchTasks();
-    } catch (err) {
+    } catch {
       alert("Delete failed");
     }
   };
@@ -105,16 +107,37 @@ function App() {
       });
 
       fetchTasks();
-    } catch (err) {
+    } catch {
       alert("Update failed");
     }
   };
+
+  // ================= SORTING LOGIC =================
+  let filteredTasks = tasks.filter((task) =>
+    task.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (sortType === "dueDate") {
+    filteredTasks.sort(
+      (a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0)
+    );
+  } else if (sortType === "priority") {
+    const priorityOrder = { High: 1, Medium: 2, Low: 3 };
+    filteredTasks.sort(
+      (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
+    );
+  } else {
+    filteredTasks.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+  }
+
+  const completedCount = tasks.filter((t) => t.completed).length;
 
   // ================= AUTH =================
   const handleSignup = async () => {
     try {
       setLoading(true);
-
       const res = await fetch(`${BASE_URL}/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,15 +145,12 @@ function App() {
       });
 
       const data = await res.json();
-
       if (res.ok) {
         alert(data.message);
         setIsLogin(true);
       } else {
         alert(data.message);
       }
-    } catch {
-      alert("Signup failed");
     } finally {
       setLoading(false);
     }
@@ -139,7 +159,6 @@ function App() {
   const handleLogin = async () => {
     try {
       setLoading(true);
-
       const res = await fetch(`${BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -155,8 +174,6 @@ function App() {
       } else {
         alert(data.message);
       }
-    } catch {
-      alert("Login failed");
     } finally {
       setLoading(false);
     }
@@ -168,12 +185,6 @@ function App() {
     setTasks([]);
   };
 
-  const filteredTasks = tasks.filter((task) =>
-    task.title.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const completedCount = tasks.filter((t) => t.completed).length;
-
   // ================= AUTH SCREEN =================
   if (!user) {
     return (
@@ -184,7 +195,6 @@ function App() {
           {!isLogin && (
             <input
               style={styles.input}
-              type="text"
               placeholder="Name"
               onChange={(e) => setName(e.target.value)}
             />
@@ -192,7 +202,6 @@ function App() {
 
           <input
             style={styles.input}
-            type="email"
             placeholder="Email"
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -207,15 +216,11 @@ function App() {
           <button
             style={styles.addBtn}
             onClick={isLogin ? handleLogin : handleSignup}
-            disabled={loading}
           >
             {loading ? "Please wait..." : isLogin ? "Login" : "Signup"}
           </button>
 
-          <p
-            style={{ cursor: "pointer", marginTop: "10px" }}
-            onClick={() => setIsLogin(!isLogin)}
-          >
+          <p onClick={() => setIsLogin(!isLogin)} style={{ cursor: "pointer" }}>
             {isLogin
               ? "Don't have an account? Signup"
               : "Already have an account? Login"}
@@ -234,20 +239,13 @@ function App() {
         </button>
 
         <h1>Student Task Tracker 🚀</h1>
-        <p>Welcome, {user.name}</p>
 
-        <p>Total Tasks: {tasks.length}</p>
-        <p>Completed: {completedCount}</p>
-
-        <div style={styles.inputRow}>
-          <input
-            style={styles.input}
-            type="text"
-            placeholder="Task title..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
+        <input
+          style={styles.input}
+          placeholder="Task title..."
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
 
         <input
           style={styles.input}
@@ -271,89 +269,37 @@ function App() {
         </button>
 
         <input
-          style={{ ...styles.input, marginTop: "20px" }}
-          type="text"
+          style={styles.input}
           placeholder="🔍 Search tasks..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        <h3>📌 Pending Tasks</h3>
+        <select
+          style={styles.input}
+          value={sortType}
+          onChange={(e) => setSortType(e.target.value)}
+        >
+          <option value="created">Sort by Created</option>
+          <option value="dueDate">Sort by Due Date</option>
+          <option value="priority">Sort by Priority</option>
+        </select>
+
         <ul style={styles.list}>
-          {filteredTasks
-            .filter((task) => !task.completed)
-            .map((task) => (
-              <li key={task._id} style={styles.taskItem}>
-                <div style={{ flex: 1 }}>
-                  <strong
-                    style={{ cursor: "pointer" }}
-                    onClick={() => toggleComplete(task)}
-                  >
-                    {task.title}
-                  </strong>
-
-                  <div style={{ fontSize: "12px" }}>
-                    📅{" "}
-                    {task.dueDate
-                      ? new Date(task.dueDate).toLocaleDateString()
-                      : "No Due Date"}
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color:
-                        task.priority === "High"
-                          ? "red"
-                          : task.priority === "Medium"
-                          ? "orange"
-                          : "green",
-                    }}
-                  >
-                    🔥 {task.priority}
-                  </div>
-
-                  {task.dueDate &&
-                    new Date(task.dueDate) < new Date() && (
-                      <div style={{ color: "red", fontSize: "12px" }}>
-                        ⚠️ Overdue
-                      </div>
-                    )}
-                </div>
-
-                <button
-                  style={styles.deleteBtn}
-                  onClick={() => deleteTask(task._id)}
-                >
-                  ❌
-                </button>
-              </li>
-            ))}
-        </ul>
-
-        <h3>✅ Completed Tasks</h3>
-        <ul style={styles.list}>
-          {filteredTasks
-            .filter((task) => task.completed)
-            .map((task) => (
-              <li key={task._id} style={styles.taskItem}>
-                <span
-                  style={{
-                    textDecoration: "line-through",
-                    flex: 1,
-                  }}
-                >
+          {filteredTasks.map((task) => (
+            <li key={task._id} style={styles.taskItem}>
+              <div style={{ flex: 1 }}>
+                <strong onClick={() => toggleComplete(task)}>
                   {task.title}
-                </span>
-
-                <button
-                  style={styles.deleteBtn}
-                  onClick={() => deleteTask(task._id)}
-                >
-                  ❌
-                </button>
-              </li>
-            ))}
+                </strong>
+                <div>📅 {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Due Date"}</div>
+                <div>🔥 {task.priority}</div>
+              </div>
+              <button onClick={() => deleteTask(task._id)} style={styles.deleteBtn}>
+                ❌
+              </button>
+            </li>
+          ))}
         </ul>
       </div>
     </div>
@@ -373,18 +319,10 @@ const styles = {
     padding: "30px",
     borderRadius: "12px",
     width: "450px",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-    position: "relative",
-  },
-  inputRow: {
-    display: "flex",
-    gap: "10px",
   },
   input: {
     width: "100%",
     padding: "8px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
     marginBottom: "10px",
   },
   addBtn: {
@@ -393,28 +331,15 @@ const styles = {
     background: "#667eea",
     color: "white",
     border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
     marginBottom: "10px",
   },
   deleteBtn: {
     background: "red",
     color: "white",
     border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    padding: "5px 8px",
   },
   logoutBtn: {
-    position: "absolute",
-    top: "10px",
-    right: "10px",
-    background: "#333",
-    color: "white",
-    border: "none",
-    padding: "5px 10px",
-    borderRadius: "6px",
-    cursor: "pointer",
+    float: "right",
   },
   list: {
     listStyle: "none",
@@ -423,11 +348,9 @@ const styles = {
   taskItem: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "10px",
     padding: "8px",
     background: "#f4f4f4",
-    borderRadius: "6px",
+    marginBottom: "10px",
   },
 };
 
