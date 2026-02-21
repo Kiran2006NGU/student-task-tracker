@@ -18,9 +18,10 @@ function App() {
   // ================= CHECK LOGIN ON LOAD =================
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    const token = localStorage.getItem("token");
+
+    if (storedUser && token) {
       setUser(JSON.parse(storedUser));
-      fetchTasks();
     }
   }, []);
 
@@ -28,12 +29,16 @@ function App() {
   const fetchTasks = async () => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) return;
 
       const res = await fetch(`${BASE_URL}/tasks`, {
         headers: { Authorization: token },
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.log("Failed to fetch tasks");
+        return;
+      }
 
       const data = await res.json();
       setTasks(data);
@@ -41,6 +46,13 @@ function App() {
       console.log("Fetch error:", err);
     }
   };
+
+  // Load tasks when user logs in
+  useEffect(() => {
+    if (user) {
+      fetchTasks();
+    }
+  }, [user]);
 
   // ================= ADD TASK =================
   const addTask = async () => {
@@ -143,12 +155,11 @@ function App() {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         setUser(data.user);
-        fetchTasks();
       } else {
-        alert(data.message || "Login failed");
+        alert(data.message || "Invalid credentials");
       }
     } catch (err) {
-      alert("Server is waking up... please try again.");
+      alert("Server may be waking up. Please try again in a few seconds.");
     } finally {
       setLoading(false);
     }
