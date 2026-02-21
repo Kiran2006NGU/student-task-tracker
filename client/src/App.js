@@ -13,6 +13,9 @@ function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [loading, setLoading] = useState(false);
+
+  // ================= CHECK LOGIN ON LOAD =================
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -21,92 +24,133 @@ function App() {
     }
   }, []);
 
+  // ================= FETCH TASKS =================
   const fetchTasks = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
 
-    const res = await fetch(`${BASE_URL}/tasks`, {
-      headers: {
-        Authorization: token,
-      },
-    });
+      const res = await fetch(`${BASE_URL}/tasks`, {
+        headers: { Authorization: token },
+      });
 
-    const data = await res.json();
-    setTasks(data);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setTasks(data);
+    } catch (err) {
+      console.log("Fetch error:", err);
+    }
   };
 
+  // ================= ADD TASK =================
   const addTask = async () => {
     if (!title) return;
 
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
 
-    await fetch(`${BASE_URL}/tasks`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify({ title }),
-    });
+      await fetch(`${BASE_URL}/tasks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({ title }),
+      });
 
-    setTitle("");
-    fetchTasks();
+      setTitle("");
+      fetchTasks();
+    } catch (err) {
+      alert("Failed to add task");
+    }
   };
 
+  // ================= DELETE TASK =================
   const deleteTask = async (id) => {
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
 
-    await fetch(`${BASE_URL}/tasks/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: token,
-      },
-    });
+      await fetch(`${BASE_URL}/tasks/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: token },
+      });
 
-    fetchTasks();
+      fetchTasks();
+    } catch (err) {
+      alert("Failed to delete task");
+    }
   };
 
+  // ================= TOGGLE COMPLETE =================
   const toggleComplete = async (task) => {
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
 
-    await fetch(`${BASE_URL}/tasks/${task._id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify({ completed: !task.completed }),
-    });
+      await fetch(`${BASE_URL}/tasks/${task._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({ completed: !task.completed }),
+      });
 
-    fetchTasks();
+      fetchTasks();
+    } catch (err) {
+      alert("Failed to update task");
+    }
   };
 
+  // ================= AUTH =================
   const handleSignup = async () => {
-    const res = await fetch(`${BASE_URL}/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+    try {
+      setLoading(true);
 
-    const data = await res.json();
-    alert(data.message);
+      const res = await fetch(`${BASE_URL}/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message || "Signup successful");
+        setIsLogin(true);
+      } else {
+        alert(data.message || "Signup failed");
+      }
+    } catch (err) {
+      alert("Server error. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async () => {
-    const res = await fetch(`${BASE_URL}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      setLoading(true);
 
-    const data = await res.json();
+      const res = await fetch(`${BASE_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      setUser(data.user);
-      fetchTasks();
-    } else {
-      alert(data.message);
+      const data = await res.json();
+
+      if (res.ok && data.token) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        setUser(data.user);
+        fetchTasks();
+      } else {
+        alert(data.message || "Login failed");
+      }
+    } catch (err) {
+      alert("Server is waking up... please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -123,6 +167,7 @@ function App() {
 
   const completedCount = tasks.filter((t) => t.completed).length;
 
+  // ================= AUTH SCREEN =================
   if (!user) {
     return (
       <div style={styles.page}>
@@ -155,8 +200,9 @@ function App() {
           <button
             style={styles.addBtn}
             onClick={isLogin ? handleLogin : handleSignup}
+            disabled={loading}
           >
-            {isLogin ? "Login" : "Signup"}
+            {loading ? "Please wait..." : isLogin ? "Login" : "Signup"}
           </button>
 
           <p
@@ -172,6 +218,7 @@ function App() {
     );
   }
 
+  // ================= MAIN APP =================
   return (
     <div style={styles.page}>
       <div style={styles.card}>
@@ -258,7 +305,6 @@ function App() {
   );
 }
 
-// ======= STYLES OBJECT =======
 const styles = {
   page: {
     minHeight: "100vh",
