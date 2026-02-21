@@ -168,10 +168,9 @@ app.put("/tasks/:id", auth, async (req, res) => {
 
 // ================= DATABASE CONNECTION =================
 console.log("MONGO_URI:", process.env.MONGO_URI ? "Loaded ✅" : "Missing ❌");
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected ✅"))
+  .catch(err => console.error("MongoDB connection error:", err.message))
   .then(() => console.log("MongoDB Connected ✅"))
   .catch((err) => {
     console.error("MongoDB connection error:", err);
