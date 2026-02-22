@@ -6,10 +6,8 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
   const [search, setSearch] = useState("");
-
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("Medium");
-
   const [sortType, setSortType] = useState("created");
 
   const [user, setUser] = useState(null);
@@ -17,14 +15,12 @@ function App() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
 
   // ================= CHECK LOGIN =================
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
-
     if (storedUser && token) {
       setUser(JSON.parse(storedUser));
     }
@@ -43,7 +39,7 @@ function App() {
       const data = await res.json();
       setTasks(data);
     } catch (err) {
-      console.log("Fetch error:", err);
+      console.log(err);
     }
   };
 
@@ -58,13 +54,16 @@ function App() {
     try {
       const token = localStorage.getItem("token");
 
+      const taskData = { title, priority };
+      if (dueDate) taskData.dueDate = dueDate;
+
       await fetch(`${BASE_URL}/tasks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify({ title, dueDate, priority }),
+        body: JSON.stringify(taskData),
       });
 
       setTitle("");
@@ -76,65 +75,29 @@ function App() {
     }
   };
 
-  // ================= DELETE =================
   const deleteTask = async (id) => {
-    try {
-      const token = localStorage.getItem("token");
-
-      await fetch(`${BASE_URL}/tasks/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: token },
-      });
-
-      fetchTasks();
-    } catch {
-      alert("Delete failed");
-    }
+    const token = localStorage.getItem("token");
+    await fetch(`${BASE_URL}/tasks/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: token },
+    });
+    fetchTasks();
   };
 
-  // ================= TOGGLE =================
   const toggleComplete = async (task) => {
-    try {
-      const token = localStorage.getItem("token");
-
-      await fetch(`${BASE_URL}/tasks/${task._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token,
-        },
-        body: JSON.stringify({ completed: !task.completed }),
-      });
-
-      fetchTasks();
-    } catch {
-      alert("Update failed");
-    }
+    const token = localStorage.getItem("token");
+    await fetch(`${BASE_URL}/tasks/${task._id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify({ completed: !task.completed }),
+    });
+    fetchTasks();
   };
 
-  // ================= SORTING LOGIC =================
-  let filteredTasks = tasks.filter((task) =>
-    task.title.toLowerCase().includes(search.toLowerCase())
-  );
-
-  if (sortType === "dueDate") {
-    filteredTasks.sort(
-      (a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0)
-    );
-  } else if (sortType === "priority") {
-    const priorityOrder = { High: 1, Medium: 2, Low: 3 };
-    filteredTasks.sort(
-      (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
-    );
-  } else {
-    filteredTasks.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
-  }
-
-  //const completedCount = tasks.filter((t) => t.completed).length;
-
-  // ================= AUTH =================
+  // ================= AUTH FUNCTIONS =================
   const handleSignup = async () => {
     try {
       setLoading(true);
@@ -145,12 +108,10 @@ function App() {
       });
 
       const data = await res.json();
-      if (res.ok) {
-        alert(data.message);
-        setIsLogin(true);
-      } else {
-        alert(data.message);
-      }
+      alert(data.message);
+      setIsLogin(true);
+    } catch {
+      alert("Signup failed");
     } finally {
       setLoading(false);
     }
@@ -167,13 +128,15 @@ function App() {
 
       const data = await res.json();
 
-      if (res.ok && data.token) {
+      if (data.token) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         setUser(data.user);
       } else {
         alert(data.message);
       }
+    } catch {
+      alert("Login failed");
     } finally {
       setLoading(false);
     }
@@ -184,6 +147,29 @@ function App() {
     setUser(null);
     setTasks([]);
   };
+
+  // ================= SORTING =================
+  let filteredTasks = tasks.filter((task) =>
+    task.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (sortType === "dueDate") {
+    filteredTasks.sort(
+      (a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0)
+    );
+  } else if (sortType === "priority") {
+    const order = { High: 1, Medium: 2, Low: 3 };
+    filteredTasks.sort((a, b) => order[a.priority] - order[b.priority]);
+  } else {
+    filteredTasks.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+  }
+
+  const completedCount = tasks.filter((t) => t.completed).length;
+  const completionPercent = tasks.length
+    ? Math.round((completedCount / tasks.length) * 100)
+    : 0;
 
   // ================= AUTH SCREEN =================
   if (!user) {
@@ -230,7 +216,7 @@ function App() {
     );
   }
 
-  // ================= MAIN APP =================
+  // ================= MAIN UI =================
   return (
     <div style={styles.page}>
       <div style={styles.card}>
@@ -239,6 +225,12 @@ function App() {
         </button>
 
         <h1>Student Task Tracker 🚀</h1>
+
+        <div style={styles.stats}>
+          <p>Total: {tasks.length}</p>
+          <p>Completed: {completedCount}</p>
+          <p>Progress: {completionPercent}%</p>
+        </div>
 
         <input
           style={styles.input}
@@ -259,9 +251,9 @@ function App() {
           value={priority}
           onChange={(e) => setPriority(e.target.value)}
         >
-          <option value="Low">Low</option>
-          <option value="Medium">Medium</option>
-          <option value="High">High</option>
+          <option>Low</option>
+          <option>Medium</option>
+          <option>High</option>
         </select>
 
         <button style={styles.addBtn} onClick={addTask}>
@@ -270,7 +262,7 @@ function App() {
 
         <input
           style={styles.input}
-          placeholder="🔍 Search tasks..."
+          placeholder="Search..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -288,14 +280,23 @@ function App() {
         <ul style={styles.list}>
           {filteredTasks.map((task) => (
             <li key={task._id} style={styles.taskItem}>
-              <div style={{ flex: 1 }}>
+              <div>
                 <strong onClick={() => toggleComplete(task)}>
                   {task.title}
                 </strong>
-                <div>📅 {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Due Date"}</div>
+                <div>
+                  📅{" "}
+                  {task.dueDate
+                    ? new Date(task.dueDate).toISOString().split("T")[0]
+                    : "No Due Date"}
+                </div>
                 <div>🔥 {task.priority}</div>
               </div>
-              <button onClick={() => deleteTask(task._id)} style={styles.deleteBtn}>
+
+              <button
+                style={styles.deleteBtn}
+                onClick={() => deleteTask(task._id)}
+              >
                 ❌
               </button>
             </li>
@@ -319,6 +320,9 @@ const styles = {
     padding: "30px",
     borderRadius: "12px",
     width: "450px",
+  },
+  stats: {
+    marginBottom: "15px",
   },
   input: {
     width: "100%",
